@@ -18,14 +18,25 @@ def form_blocks(body):
             yield cur_block
             cur_block = [instr]
 
-    yield cur_block()
+    yield cur_block
 
 def get_cfg(name2block):
     out = {}
-    for name, block in name2block.items():
+    for i, (name, block) in enumerate(name2block.items()):
         last = block[-1]
-        
+        if last['op'] in ('jmp', 'br'):
+            succ = last['labels']
+        elif last['op'] == 'ret':
+            succ = []
+        else:
+            if i == len(name2block) - 1:
+                succ = []
+            else:
+                succ = [list(name2block.keys())[i + 1]]
 
+        out[name] = succ
+    
+    return out
 
 
 def mycfg():
@@ -33,7 +44,14 @@ def mycfg():
     for func in prog['functions']:
         name2block = block_map(form_blocks(func['instrs']))
         cfg = get_cfg(name2block)
-        print(cfg)
+
+        print('digraph {} {{'.format(func['name']))
+        for name in name2block:
+            print('  {};'.format(name))
+        for name, succs in cfg.items():
+            for succ in succs:
+                print('  {} -> {};'.format(name, succ))
+        print('}')
        
 
 def block_map(blocks):
